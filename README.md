@@ -1,6 +1,6 @@
 # MSAccess-agent
 
-Use the **Access-POSH.ps1** PowerShell script to interact with Access databases via COM automation.
+Use the **Access-POSH.ps1** PowerShell script to interact with Access databases via COM automation. Replace the .ps1 path in the .md files to the path on your computer.
 
 ## Available Functions (54 public)
 

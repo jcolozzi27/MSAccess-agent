@@ -6,7 +6,7 @@ No MCP server needed — A custom access-dev agent calls functions directly via 
 
 The agent will use the **Access-POSH.ps1** PowerShell script to interact with Access databases via COM automation. 
 
-Setup
+Setup:
 1. Clone or download the repo
 2. Put the two .md files in C:\Users\%USERNAME%\AppData\Roaming\Code\User\prompts folder 
 3. Replace the path in the .md files to the location of the **Access-POSH.ps1** script on your computer.

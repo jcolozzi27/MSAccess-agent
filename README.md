@@ -2,9 +2,14 @@
 
 **Access-POSH.ps1** is a port of the Python unmateria/MCP-Access server (54+ tools) to native PowerShell.
 
-No MCP server needed — AI agents call functions directly via terminal.
+No MCP server needed — A custom AI access-dev agent call functions directly via terminal.
 
-Use the **Access-POSH.ps1** PowerShell script to interact with Access databases via COM automation. Replace the .ps1 path in the .md files to the path on your computer.
+The agent will use the **Access-POSH.ps1** PowerShell script to interact with Access databases via COM automation. 
+
+Setup
+1. Clone or download the repo
+2. Put the two .md files in C:\Users\%USERNAME%\AppData\Roaming\Code\User\prompts folder 
+3. Replace the path in the .md files to the location of the **Access-POSH.ps1** script on your computer.
 
 ## Available Functions (54 public)
 

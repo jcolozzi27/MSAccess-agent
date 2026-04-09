@@ -2,7 +2,7 @@
 
 Access-POSH.ps1 is a PowerShell port of [unmateria/MCP-Access](https://github.com/unmateria/MCP-Access) project. It provides over 50 PowerShell functions for automating Microsoft Access via COM—things like creating databases, running SQL, editing tables and forms, working with VBA code, and more.
 
-The custom access-dev agent in VS Code runs PowerShell in a terminal and calls the *‑Access functions in Access-POSH.ps1 directly. 
+The custom access-dev agent in VS Code runs PowerShell in a terminal and calls the Access functions in Access-POSH.ps1 directly. 
 
 You still get all the “tools” (the 54 functions) without an MCP server. 
 

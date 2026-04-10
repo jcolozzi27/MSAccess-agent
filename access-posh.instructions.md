@@ -1,18 +1,12 @@
 ---
 description: "Use when the user mentions Access databases (.accdb/.mdb), Access-POSH, Access-POSH.ps1, PowerShell COM automation for Access, or asks to open/query/modify an Access database."
 ---
-# Access-POSH Script
+# AccessPOSH Module
 
-When working with Microsoft Access databases, use the PowerShell script at:
-
-```
-c:\PATH\TO\Access POSH\Access-POSH.ps1
-```
-
-Dot-source it in a PowerShell 7 terminal before calling any Access functions:
+When working with Microsoft Access databases, import the PowerShell module:
 
 ```powershell
-. "C:\PATH\TO\Access POSH\Access-POSH.ps1"
+Import-Module "C:\PATH\TO\AccessPOSH.psd1" -Force
 ```
 
-This script provides 54 PowerShell functions for full Access database automation via COM. Use `-AsJson` on any function for structured output. The `@access-dev` agent has the complete function reference.
+This module provides 91 PowerShell functions for full Access database automation via COM. Use `-AsJson` on any function for structured output. The `@access-dev` agent has the complete function reference.

@@ -5,7 +5,7 @@
 ![Platform: Windows](https://img.shields.io/badge/platform-Windows-blue?logo=windows)
 ![PowerShell: 5.1+](https://img.shields.io/badge/PowerShell-5.1%2B-blue?logo=powershell)
 ![VS Code](https://img.shields.io/badge/VS%20Code-GitHub%20Copilot%20Chat-blueviolet?logo=visual-studio-code)
-![Functions: 91](https://img.shields.io/badge/functions-91-brightgreen)
+![Functions: 93](https://img.shields.io/badge/functions-93-brightgreen)
 ![Module Version](https://img.shields.io/badge/version-1.0.0-orange)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
@@ -18,7 +18,7 @@ You:   "Create a Customers table with ID (AutoNumber PK), Name (Text 100), and E
 Agent: → New-AccessTable → confirms success
 ```
 
-The **AccessPOSH** module (included) is a PowerShell port of [unmateria/MCP-Access](https://github.com/unmateria/MCP-Access), expanded to **91 public functions** covering databases, tables, forms, controls, VBA/VBE, SQL, reports, imports, security, and UI automation.
+The **AccessPOSH** module (included) is a PowerShell port of [unmateria/MCP-Access](https://github.com/unmateria/MCP-Access), expanded to **93 public functions** covering databases, tables, forms, controls, VBA/VBE, SQL, reports, imports, security, and UI automation.
 
 ## How it works
 
@@ -59,7 +59,21 @@ VS Code Copilot Chat (agent mode)
 git clone https://github.com/jcolozzi/MSAccess-CLI-Agent.git
 ```
 
-### 2 — Install the agent instructions
+### 2 — Import the module in your VS Code terminal
+
+Open the integrated terminal in VS Code and import the module once per session (or add to your `$PROFILE`):
+
+```powershell
+Import-Module "C:\path\to\MSAccess-agent\AccessPOSH\AccessPOSH.psd1"
+```
+
+Verify it loaded:
+
+```powershell
+Get-Command -Module AccessPOSH | Measure-Object  # should show 93
+```
+
+### 3 — Install the agent instructions
 
 Choose **one** of the following:
 
@@ -76,7 +90,7 @@ Copy both `.md` files into a `.github\agents\` folder in your workspace root. VS
 
 > **Note:** VS Code detects any `.md` files in the `.github/agents/` folder of your workspace as custom agents.
 
-### 3 — Update the module path inside the agent files
+### 4 — Update the module path inside the agent files
 
 Open each `.md` agent file and replace the placeholder path with the actual path to `AccessPOSH.psd1` on your machine:
 
@@ -88,7 +102,7 @@ Import-Module "C:\path\to\AccessPOSH\AccessPOSH.psd1"
 Import-Module "C:\Projects\MSAccess-agent\AccessPOSH\AccessPOSH.psd1"
 ```
 
-### 4 — Select the agent and start prompting
+### 5 — Select the agent and start prompting
 
 In VS Code Copilot Chat, click the agent picker and choose **access-dev**. Open (or have the agent open) a `.accdb` file, then start describing what you want.
 
@@ -103,6 +117,8 @@ In VS Code Copilot Chat, click the agent picker and choose **access-dev**. Open 
 | "Show me the VBA in Module1" | `Get-AccessCode` |
 | "Add error handling to the SaveRecord procedure" | `Update-AccessVbeProc` |
 | "Export the Monthly Sales report to PDF" | `Export-AccessReport` |
+| "Export all objects to a src folder" | `Export-AccessSource` |
+| "Import forms and modules from the src folder" | `Import-AccessSource` |
 | "Take a screenshot of the open form" | `Get-AccessScreenshot` |
 | "Import data from Customers.csv into the Customers table" | `Import-AccessFromCSV` |
 | "What would happen if I ran New-AccessTable? (dry run)" | `New-AccessTable -WhatIf` |
@@ -161,8 +177,8 @@ Invoke-Pester .\Tests\ -Output Detailed
 | **References** | `Get-AccessReference`, `Set-AccessReference` |
 | **Queries** | `Set-AccessQuery`, `Search-AccessQuery` |
 | **Properties** | `Get-AccessDatabaseProperty`, `Set-AccessDatabaseProperty`, `Get-AccessStartupOption` |
-| **Export** | `Export-AccessReport`, `Copy-AccessData`, `Export-AccessToExcel`, `Export-AccessFilteredReport` |
-| **Import** | `Import-AccessFromExcel`, `Import-AccessFromCSV`, `Import-AccessFromXML`, `Import-AccessFromDatabase` |
+| **Export** | `Export-AccessReport`, `Copy-AccessData`, `Export-AccessSource`, `Export-AccessToExcel`, `Export-AccessFilteredReport` |
+| **Import** | `Import-AccessSource`, `Import-AccessFromExcel`, `Import-AccessFromCSV`, `Import-AccessFromXML`, `Import-AccessFromDatabase` |
 | **Security** | `Test-AccessDatabasePassword`, `Set-AccessDatabasePassword`, `Remove-AccessDatabasePassword`, `Get-AccessDatabaseEncryption` |
 | **Reports** | `New-AccessReport`, `Get-AccessGroupLevel`, `Set-AccessGroupLevel`, `Remove-AccessGroupLevel` |
 | **SubDataSheets** | `Get-AccessSubDataSheet`, `Set-AccessSubDataSheet` |

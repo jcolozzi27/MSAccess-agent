@@ -179,6 +179,23 @@ $script:AC_EXPORT_DELIM     = 2    # acExportDelim (CSV)
 $script:AC_SPREADSHEET_XLSX = 10   # acSpreadsheetTypeExcel12Xml
 $script:AC_CMD_COMPILE      = 126  # acCmdCompileAndSaveAllModules
 
+# ExportXML object type constants
+$script:AC_EXPORT_XML_TYPE = @{
+    table  = 0   # acExportTable
+    query  = 1   # acExportQuery
+    form   = 2   # acExportForm
+    report = 3   # acExportReport
+}
+
+# Reverse DAO field type → DDL type name (for CREATE TABLE generation)
+$script:DAO_TO_DDL_TYPE = @{
+    1  = 'YESNO';       2  = 'BYTE';       3  = 'SHORT'
+    4  = 'LONG';        5  = 'CURRENCY';   6  = 'SINGLE'
+    7  = 'DOUBLE';      8  = 'DATETIME';   10 = 'TEXT'
+    11 = 'LONGBINARY';  12 = 'MEMO';       15 = 'GUID'
+    16 = 'BIGINT';      20 = 'DECIMAL'
+}
+
 # ═══════════════════════════════════════════════════════════════════════════
 # SESSION STATE
 # ═══════════════════════════════════════════════════════════════════════════
@@ -186,6 +203,7 @@ $script:AC_CMD_COMPILE      = 126  # acCmdCompileAndSaveAllModules
 $script:AccessSession = @{
     App            = $null      # COM Access.Application object
     DbPath         = $null      # Currently open database path (resolved)
+    OwnsApp        = $false     # $true when we created the COM instance; controls Quit() on exit
     VbeCodeCache   = @{}        # "type:name" → full module text
     ControlsCache  = @{}        # "type:name" → parsed control structure
     CmCache        = @{}        # "type:name" → CodeModule COM object
@@ -211,10 +229,14 @@ foreach ($file in (Get-ChildItem -Path "$PSScriptRoot\Public\*.ps1" -ErrorAction
 
 Register-EngineEvent -SourceIdentifier PowerShell.Exiting -Action {
     if ($null -ne $script:AccessSession -and $null -ne $script:AccessSession.App) {
-        try { $script:AccessSession.App.Quit() } catch {}
+        # Only Quit the app if we created it (OwnsApp); otherwise just release our COM reference
+        if ($script:AccessSession.OwnsApp) {
+            try { $script:AccessSession.App.Quit() } catch {}
+        }
         try { [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($script:AccessSession.App) } catch {}
-        $script:AccessSession.App    = $null
-        $script:AccessSession.DbPath = $null
+        $script:AccessSession.App     = $null
+        $script:AccessSession.DbPath  = $null
+        $script:AccessSession.OwnsApp = $false
     }
 } | Out-Null
 

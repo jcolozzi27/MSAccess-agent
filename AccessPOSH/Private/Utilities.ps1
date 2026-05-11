@@ -176,3 +176,86 @@ function ConvertTo-AnsiTempFile {
     [System.IO.File]::WriteAllText($tmpPath, $content, [System.Text.Encoding]::GetEncoding(1252))
     return $tmpPath
 }
+
+function Get-TableSchemaDDL {
+    <#
+    .SYNOPSIS
+        Internal: Generate CREATE TABLE DDL from DAO TableDef metadata.
+        Returns a SQL string suitable for Invoke-AccessSQL.
+    #>
+    param(
+        $App,
+        [string]$TableName
+    )
+
+    $db = $App.CurrentDb()
+    $td = $db.TableDefs($TableName)
+
+    $columns   = [System.Collections.Generic.List[string]]::new()
+    $pkFields  = [System.Collections.Generic.List[string]]::new()
+
+    try {
+        # Detect primary key fields
+        for ($ix = 0; $ix -lt $td.Indexes.Count; $ix++) {
+            $idx = $td.Indexes($ix)
+            if ($idx.Primary) {
+                for ($f = 0; $f -lt $idx.Fields.Count; $f++) {
+                    $pkFields.Add($idx.Fields($f).Name)
+                }
+            }
+            [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($idx)
+        }
+
+        for ($i = 0; $i -lt $td.Fields.Count; $i++) {
+            $fld      = $td.Fields($i)
+            $name     = $fld.Name
+            $ftype    = [int]$fld.Type
+            $size     = $fld.Size
+            $required = [bool]$fld.Required
+            $defVal   = try { $fld.DefaultValue } catch { $null }
+            $attrs    = [int]$fld.Attributes
+
+            # AutoNumber: Long (4) with dbAutoIncrField (16)
+            $isAutoNum = ($ftype -eq 4 -and ($attrs -band $script:DB_AUTO_INCR_FIELD))
+
+            if ($isAutoNum) {
+                $typeDDL = 'AUTOINCREMENT'
+            } else {
+                $typeName = $script:DAO_TO_DDL_TYPE[$ftype]
+                if (-not $typeName) { $typeName = "LONG" }  # fallback
+
+                # TEXT needs explicit size
+                if ($ftype -eq 10) {
+                    $typeDDL = "TEXT($size)"
+                } else {
+                    $typeDDL = $typeName
+                }
+            }
+
+            $colDef = "    [$name] $typeDDL"
+
+            if ($required -and -not $isAutoNum) {
+                $colDef += ' NOT NULL'
+            }
+
+            if ($defVal -and -not $isAutoNum) {
+                $colDef += " DEFAULT $defVal"
+            }
+
+            $columns.Add($colDef)
+            [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($fld)
+        }
+
+        # Add PRIMARY KEY constraint
+        if ($pkFields.Count -gt 0) {
+            $pkCols = ($pkFields | ForEach-Object { "[$_]" }) -join ', '
+            $columns.Add("    CONSTRAINT [PK_$TableName] PRIMARY KEY ($pkCols)")
+        }
+    } finally {
+        [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($td)
+        [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($db)
+    }
+
+    $ddl = "CREATE TABLE [$TableName] (`r`n" + ($columns -join ",`r`n") + "`r`n);"
+    return $ddl
+}

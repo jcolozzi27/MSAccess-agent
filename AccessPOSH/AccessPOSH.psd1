@@ -88,6 +88,8 @@
         # Export
         'Export-AccessReport'
         'Copy-AccessData'
+        'Export-AccessSource'
+        'Import-AccessSource'
 
         # UI Automation
         'Get-AccessScreenshot'

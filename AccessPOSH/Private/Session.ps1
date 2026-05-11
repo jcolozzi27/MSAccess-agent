@@ -1,5 +1,40 @@
 # Private/Session.ps1 — COM session management helpers
 
+function Get-RunningComApp {
+    <#
+    .SYNOPSIS
+        Try to attach to an already-running COM application via the Running Object Table.
+        Returns the COM object or $null.  Works on Windows PowerShell 5.1 (Desktop);
+        gracefully degrades on PowerShell 7+ where [Marshal]::GetActiveObject is unavailable.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$ProgId,
+        [Parameter(Mandatory)][string]$ProcessName
+    )
+
+    # Fast exit: if the host process isn't running, skip the COM probe entirely
+    if (-not (Get-Process -Name $ProcessName -ErrorAction SilentlyContinue)) {
+        Write-Verbose "Get-RunningComApp: no $ProcessName process found — skipping ROT lookup."
+        return $null
+    }
+
+    try {
+        $app = [System.Runtime.InteropServices.Marshal]::GetActiveObject($ProgId)
+        Write-Verbose "Get-RunningComApp: attached to existing $ProgId instance."
+        return $app
+    }
+    catch [System.Management.Automation.MethodException] {
+        # .NET Core / PS7 — GetActiveObject does not exist
+        Write-Verbose "Get-RunningComApp: [Marshal]::GetActiveObject unavailable (PowerShell $($PSVersionTable.PSVersion)) — will create new instance."
+        return $null
+    }
+    catch {
+        # No ROT entry, or stale/dead entry
+        Write-Verbose "Get-RunningComApp: could not attach to $ProgId — $($_.Exception.Message)"
+        return $null
+    }
+}
+
 function Test-AccessAlive {
     <#
     .SYNOPSIS
@@ -81,9 +116,12 @@ function Connect-AccessDB {
     .SYNOPSIS
         Internal: ensure Access COM is running and the requested DB is open.
         Returns the COM Application object.
+        Tries to attach to an already-running Access instance (GetObject-first)
+        before creating a new one, to prevent duplicate instances and file corruption.
     #>
     param(
-        [string]$DbPath
+        [string]$DbPath,
+        [switch]$ForceNewInstance
     )
     if (-not $DbPath) { throw "Connect-AccessDB: -DbPath is required." }
 
@@ -93,30 +131,65 @@ function Connect-AccessDB {
     if ($null -ne $script:AccessSession.App) {
         if (-not (Test-AccessAlive)) {
             Write-Verbose 'COM session stale — auto-reconnecting...'
-            $script:AccessSession.App    = $null
-            $script:AccessSession.DbPath = $null
+            $script:AccessSession.App     = $null
+            $script:AccessSession.DbPath  = $null
+            $script:AccessSession.OwnsApp = $false
             Clear-AccessCaches
         }
     }
 
-    # Launch Access if needed
+    # Acquire Access instance if needed (GetObject-first, then New-Object)
     if ($null -eq $script:AccessSession.App) {
-        Write-Verbose 'Launching Access.Application...'
-        try {
-            $script:AccessSession.App = New-Object -ComObject 'Access.Application'
-        } catch {
-            throw "Failed to create Access.Application COM object. Is Microsoft Access installed? Error: $_"
+        $adopted = $false
+
+        # Try to attach to an existing Access instance via the ROT
+        if (-not $ForceNewInstance) {
+            $existing = Get-RunningComApp -ProgId 'Access.Application' -ProcessName 'MSACCESS'
+            if ($null -ne $existing) {
+                # Access is single-DB-per-instance: only adopt if same DB is open
+                $existingDb = $null
+                try { $existingDb = $existing.CurrentProject.FullName } catch {}
+
+                if ($existingDb -and ($existingDb -eq $resolved)) {
+                    Write-Verbose "Adopting existing Access instance (same DB: $resolved)"
+                    $script:AccessSession.App     = $existing
+                    $script:AccessSession.OwnsApp = $false
+                    $script:AccessSession.DbPath  = $resolved
+                    $adopted = $true
+                    # Suppress dialogs on the adopted instance
+                    try {
+                        $script:AccessSession.App.DisplayAlerts = $false
+                        $script:AccessSession.App.AutomationSecurity = 1
+                    } catch {}
+                    Set-AccessVisibleBestEffort -Visible $true
+                    Clear-AccessCaches
+                    Write-Verbose 'Adopted existing Access instance OK'
+                } else {
+                    Write-Verbose "Existing Access instance has different DB ($existingDb) — creating new instance."
+                }
+            }
         }
-        # Suppress dialogs for non-interactive automation
-        try {
-            $script:AccessSession.App.DisplayAlerts = $false
-            $script:AccessSession.App.AutomationSecurity = 1  # msoAutomationSecurityForceDisable
-        } catch {}
-        Set-AccessVisibleBestEffort -Visible $true
-        Write-Verbose 'Access launched OK'
+
+        # Fall back to creating a new instance
+        if (-not $adopted) {
+            Write-Verbose 'Launching Access.Application...'
+            try {
+                $script:AccessSession.App = New-Object -ComObject 'Access.Application'
+            } catch {
+                throw "Failed to create Access.Application COM object. Is Microsoft Access installed? Error: $_"
+            }
+            $script:AccessSession.OwnsApp = $true
+            # Suppress dialogs for non-interactive automation
+            try {
+                $script:AccessSession.App.DisplayAlerts = $false
+                $script:AccessSession.App.AutomationSecurity = 1  # msoAutomationSecurityForceDisable
+            } catch {}
+            Set-AccessVisibleBestEffort -Visible $true
+            Write-Verbose 'Access launched OK'
+        }
     }
 
-    # Switch database if needed
+    # Switch database if needed (skip if we just adopted with the correct DB)
     if ($script:AccessSession.DbPath -ne $resolved) {
         if (-not (Test-Path -LiteralPath $resolved -PathType Leaf)) {
             throw "Database file not found: $resolved"
